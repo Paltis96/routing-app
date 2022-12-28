@@ -36,7 +36,6 @@ async def get_loc(id: str, conn=Depends(db.connection)):
 
     sql_q = """SELECT to_jsonb( t.* ) - 'id' - 'geom' AS json FROM locations t WHERE location_id = $1"""
     res = await conn.fetchval(sql_q, id)
-    print(res)
     if not res:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return res
@@ -81,6 +80,7 @@ async def get_loc(id: str, background_tasks: BackgroundTasks, conn=Depends(db.co
         buffer AS (
             SELECT ST_Buffer(geom, 5000) AS geom 
             FROM input_point
+            LIMIT 5
         ),
 		res AS (
 			SELECT 
