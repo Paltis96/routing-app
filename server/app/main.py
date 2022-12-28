@@ -80,7 +80,6 @@ async def get_loc(id: str, background_tasks: BackgroundTasks, conn=Depends(db.co
         buffer AS (
             SELECT ST_Buffer(geom, 5000) AS geom 
             FROM input_point
-            LIMIT 5
         ),
 		res AS (
 			SELECT 
@@ -88,6 +87,7 @@ async def get_loc(id: str, background_tasks: BackgroundTasks, conn=Depends(db.co
                 FROM public.locations t1 , buffer t2, input_point t3
                 WHERE ST_Intersects(t2.geom, ST_Transform(t1.geom, 23240)) 
                 AND t1.location_id <> $1
+                LIMIT 3
             )
         SELECT jsonb_build_object(
         'type', 'FeatureCollection',
