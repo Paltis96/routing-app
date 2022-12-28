@@ -70,7 +70,7 @@ type Res = {
   location_name: string
   location_type: string
 }
-
+const BASE_URL = 'http://104.248.241.63:8000'
 const qRes: Ref<Res> | Ref<null> = ref(null)
 const flyTo: Ref<number[]> = ref([])
 const routes: Ref<any> = ref(null)
@@ -87,7 +87,7 @@ async function delay(ms: number) {
 
 const getLoc = async () => {
   try {
-    const res = await axios.get('http://127.0.0.1:8000/get-loc', { params: { id: searchMessage.value } });
+    const res = await axios.get(BASE_URL + '/get-loc', { params: { id: searchMessage.value } });
     qRes.value = res.data;
   }
   catch (error) { console.log(error); qRes.value = null }
@@ -95,12 +95,12 @@ const getLoc = async () => {
 const calcRoute = async () => {
   loading.value = true
   try {
-    await axios.post('http://127.0.0.1:8000/calc-route', null, { params: { id: searchMessage.value } });
+    await axios.post(BASE_URL + '/calc-route', null, { params: { id: searchMessage.value } });
     while (true) {
       await delay(2000);
-      const res = await axios.get('http://127.0.0.1:8000/get-route', { params: { id: searchMessage.value } });
+      const res = await axios.get(BASE_URL + '/get-route', { params: { id: searchMessage.value } });
       console.log(res)
-      if (res.data){
+      if (res.data) {
         routes.value = res.data
         break
       }

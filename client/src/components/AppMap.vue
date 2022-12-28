@@ -40,7 +40,7 @@ onMounted(() => {
     map.addSource('locatoins', {
       'type': 'vector',
       'tiles': [
-        'http://127.0.0.1:8000/tiles/{z}/{x}/{y}.pbf'
+        'http://104.248.241.63:8000/tiles/{z}/{x}/{y}.pbf'
       ],
       'minzoom': 7,
       'maxzoom': 15
@@ -88,7 +88,7 @@ watch(() => props.flyTo!, (x) => {
   console.log(`x is ${x}`)
   map.flyTo({
     center: x,
-    zoom: 12
+    zoom: 14
   });
 })
 

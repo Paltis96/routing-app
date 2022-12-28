@@ -62,7 +62,6 @@ async def get_loc(id: str, background_tasks: BackgroundTasks, conn=Depends(db.co
         return
     
     await conn.execute("""INSERT INTO routes(location_id)  VALUES($1) on conflict do nothing""",id)
-    
     sql_q = """--sql
         UPDATE routes
         SET routes = res.routes
