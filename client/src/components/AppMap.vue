@@ -49,7 +49,7 @@ onMounted(() => {
     map.addSource('locatoins', {
       'type': 'vector',
       'tiles': [
-        `http://${BASE_URL}/tiles/{z}/{x}/{y}.pbf`
+        `${BASE_URL}/tiles/{z}/{x}/{y}.pbf`
       ],
       'minzoom': 7,
       'maxzoom': 15
