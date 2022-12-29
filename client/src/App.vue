@@ -3,7 +3,7 @@
     <div class="column is-two-fifths">
       <div class="field has-addons">
         <div class="control is-expanded">
-          <input class="input" v-model="searchMessage" type="text" placeholder="Find a repository">
+          <input class="input" v-model="searchMessage" type="text" placeholder="Find a pois by location_id">
 
         </div>
         <div class="control " v-if="searchMessage">
@@ -28,12 +28,14 @@
           </tbody>
         </table>
         <p class="buttons">
+          <a v-if="routes" :href="uploadAll(routes)" download='sample.json' class="button is-info">Upload</a>
+
           <button @click="calcRoute" :class="['button is-info', loading ? 'is-loading' : '']">Calc routes</button>
           <button @click="fly(qRes! as Res)" class="button is-info is-outlined">
             Fly to
           </button>
-          <button class="button is-danger is-outlined">
-            <span @click="qRes = null">✕</span>
+          <button @click="reset" class="button is-danger is-outlined">
+            <span >✕</span>
           </button>
         </p>
         <h3> Routes</h3>
@@ -70,7 +72,7 @@ type Res = {
   location_name: string
   location_type: string
 }
-const BASE_URL = 'http://104.248.241.63:8000'
+const BASE_URL = 'http://api:8000'
 const qRes: Ref<Res> | Ref<null> = ref(null)
 const flyTo: Ref<number[]> = ref([])
 const routes: Ref<any> = ref(null)
@@ -79,10 +81,13 @@ const fly = (coord: Res) => {
   flyTo.value = [coord.long, coord.lat]
 
 }
+const reset = () => {
+  qRes.value = null
+  routes.value = null
+}
+const uploadAll = (obj: any) => {
+  return "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj));
 
-async function delay(ms: number) {
-  // return await for better async stack trace support in case of errors.
-  return await new Promise(resolve => setTimeout(resolve, ms));
 }
 
 const getLoc = async () => {
@@ -95,16 +100,8 @@ const getLoc = async () => {
 const calcRoute = async () => {
   loading.value = true
   try {
-    await axios.post(BASE_URL + '/calc-route', null, { params: { id: searchMessage.value } });
-    while (true) {
-      await delay(2000);
-      const res = await axios.get(BASE_URL + '/get-route', { params: { id: searchMessage.value } });
-      console.log(res)
-      if (res.data) {
-        routes.value = res.data
-        break
-      }
-    }
+    const res = await axios.get(BASE_URL + '/calc-routes', { params: { id: searchMessage.value } });
+    routes.value = res.data
   }
   catch (error) { console.log(error) }
   finally {

@@ -1,0 +1,53 @@
+version: '3.1'
+
+services:
+  client:
+    build: ./client
+    ports:
+        - 80:80
+  api:
+    build: ./server
+    depends_on:
+      - db
+    ports:
+      - 8000:8000
+    volumes:
+      - ./server/:/usr/src/app:ro
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload 
+    environment:
+      - DSN=postgresql://postgres:zxc098cxz@db:5432/app
+  db:
+    image: pgrouting/pgrouting
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: zxc098cxz
+      POSTGRES_DB: app
+    volumes:
+      - postgres-data:/var/lib/postgresql/data 
+  valhalla:
+    image: gisops/valhalla:latest
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./valhalla/:/custom_files
+    environment:
+      # The tile_file must be located in the `custom_files` folder.
+      # The tile_file has priority and is used when valid.
+      # If the tile_file doesn't exist, the url is used instead.
+      # Don't blank out tile_url when you use tile_file and vice versa.
+      - tile_urls=https://download.bbbike.org/osm/extract/planet_52.646_15.961_e5ecc151.osm.pbf
+      # Get correct bounding box from e.g. https://boundingbox.klokantech.com/
+      - min_x=50 
+      - min_y=16 
+      - max_x=60 
+      - max_y=27 
+      - use_tiles_ignore_pbf=True
+      - force_rebuild=False
+      - force_rebuild_elevation=False
+      - build_elevation=True
+      - build_admins=True
+      - build_time_zones=True
+volumes:
+  postgres-data:
