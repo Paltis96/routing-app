@@ -72,7 +72,7 @@ type Res = {
   location_name: string
   location_type: string
 }
-const BASE_URL = 'http://api:8000'
+const BASE_URL = 'http://104.248.241.63:8000'
 const qRes: Ref<Res> | Ref<null> = ref(null)
 const flyTo: Ref<number[]> = ref([])
 const routes: Ref<any> = ref(null)
