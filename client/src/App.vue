@@ -35,7 +35,7 @@
             Fly to
           </button>
           <button @click="reset" class="button is-danger is-outlined">
-            <span >✕</span>
+            <span>✕</span>
           </button>
         </p>
         <h3> Routes</h3>
@@ -63,6 +63,8 @@ import { ref, computed } from 'vue'
 import type { Ref } from 'vue'
 import axios from 'axios';
 
+
+
 const searchMessage = ref('')
 type Res = {
   lat: number
@@ -72,7 +74,17 @@ type Res = {
   location_name: string
   location_type: string
 }
-const BASE_URL = 'http://104.248.241.63:8000'
+
+// TODO
+let BASE_URL = ''
+const prod = import.meta.env.PROD
+if (prod) {
+  BASE_URL = 'http://104.248.241.63:8000'
+}
+else {
+  BASE_URL = 'http://api:8000'
+
+}
 const qRes: Ref<Res> | Ref<null> = ref(null)
 const flyTo: Ref<number[]> = ref([])
 const routes: Ref<any> = ref(null)

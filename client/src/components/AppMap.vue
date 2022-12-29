@@ -6,6 +6,15 @@
 import { watch, onMounted, onUnmounted, ref } from "vue";
 import { Map, NavigationControl, Popup } from "maplibre-gl";
 
+// TODO
+let BASE_URL = ''
+const prod = import.meta.env.PROD
+if (prod) {
+  BASE_URL = 'http://104.248.241.63:8000'
+}
+else {
+  BASE_URL = 'http://api:8000'
+}
 
 const props = defineProps(['flyTo', 'newSource'])
 
@@ -40,7 +49,7 @@ onMounted(() => {
     map.addSource('locatoins', {
       'type': 'vector',
       'tiles': [
-        'http://104.248.241.63:8000/tiles/{z}/{x}/{y}.pbf'
+        `http://${BASE_URL}/tiles/{z}/{x}/{y}.pbf`
       ],
       'minzoom': 7,
       'maxzoom': 15
