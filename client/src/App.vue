@@ -5,7 +5,7 @@
         <v-col cols="12" sm="4">
           <v-tabs
             class="is-sticky"
-            bg-color="indigo-darken-2"
+            bg-color="blue-grey-darken-2"
             fixed-tabs
             v-model="tab"
           >

@@ -1,5 +1,5 @@
 <template>
-  <v-sheet color="indigo" class="pa-4">
+  <v-sheet color="blue-grey-lighten-2" class="pa-4">
     <v-text-field
       @keyup.enter="getBaseMapList"
       @click:clear="getBaseMapList"
