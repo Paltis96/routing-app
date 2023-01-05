@@ -23,26 +23,46 @@ app.add_middleware(
 
 @app.get("/get-loc", status_code=status.HTTP_200_OK)
 async def get_loc(id: str, ):
-    sql_q = """SELECT 
-                location_name
-                ,location_id
-                ,lat
-                ,long
-                ,location_type,note
-                FROM locations WHERE location_id = %s
-                """
+    sql_q = """--sql
+        WITH buffer AS ( 
+            SELECT 
+                location_id
+                , ST_Transform(
+                    ST_Buffer(
+                        ST_Transform(geom, 23240), 5000
+                        ),4326) AS buffer_geom
+                , geom
+            FROM locations 
+            WHERE location_id = %s
+        ), 
+        un_geoms AS (
+            SELECT location_id, buffer_geom as geom
+            FROM buffer
+            UNION 
+            SELECT t1.location_id, t1.geom
+            FROM locations t1, buffer t2 
+            WHERE ST_Intersects(t1.geom, t2.buffer_geom)
+        )
+        SELECT 
+        jsonb_build_object(
+            'type', 'FeatureCollection',
+            'features', jsonb_agg(obj)
+            ) as data
+        FROM (SELECT ST_AsGeoJSON(un.*)::jsonb as obj FROM un_geoms un) t
+        """
     async with await psycopg.AsyncConnection.connect(get_settings().dsn) as aconn:
         async with aconn.cursor(row_factory=dict_row) as acur:
             await acur.execute(sql_q, (id,))
             res = await acur.fetchone()
-    if not res:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    return res
+    if not res['data']['features']:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail='location_id not exists')
+    return res['data']
 
 
 async def valhalla_get(json):
     async with aiohttp.ClientSession() as session:
-        async with session.post( 'http://valhalla:8002/route', data=json) as resp:
+        async with session.post('http://valhalla:8002/route', data=json) as resp:
             return await resp.json()
 
 
@@ -126,6 +146,7 @@ async def calc_routes(id: str):
         res = await valhalla_get(json.dumps(q))
         geojson = {
             "type": "Feature",
+            "id": end['location_id'],
                     "properties": {**end,
                                    'time': res['trip']['summary']['time'],
                                    'length_km': res['trip']['summary']['length'],
@@ -133,7 +154,7 @@ async def calc_routes(id: str):
                     "geometry": {
                         "coordinates": decode_route(res['trip']['legs'][0]['shape']),
                         "type": "LineString"
-                    }}
+            }}
         fc['features'].append(geojson)
     if not res:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -146,8 +167,12 @@ async def get_loc(z: int, x: int, y: int, ):
     sql_q = """--sql
     WITH mvtgeom AS
     (
-        SELECT ST_AsMVTGeom(ST_Transform(geom, 3857), ST_TileEnvelope(%(z)s, %(x)s, %(y)s), extent => 4096, buffer => 64) AS geom,   location_id,
-                    location_name
+        SELECT 
+            ST_AsMVTGeom(ST_Transform(geom, 3857)
+            , ST_TileEnvelope(%(z)s, %(x)s, %(y)s)
+            , extent => 4096, buffer => 64) AS geom
+            , location_id
+            , location_name
         FROM locations
         WHERE ST_Transform(geom, 3857) && ST_TileEnvelope(%(z)s, %(x)s, %(y)s, margin => (64.0 / 4096))
     )

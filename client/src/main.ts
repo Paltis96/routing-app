@@ -1,13 +1,22 @@
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
+/**
+ * main.ts
+ *
+ * Bootstraps Vuetify and other plugins then mounts the App`
+ */
+
+// Components
 import App from './App.vue'
 
-import 'bulma'
-import 'bulma-list/css/bulma-list.css'
+// Composables
+import { createApp } from 'vue'
+
+// Plugins
+import { registerPlugins } from '@/plugins'
+
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const app = createApp(App)
 
-app.use(createPinia())
+registerPlugins(app)
 
 app.mount('#app')
