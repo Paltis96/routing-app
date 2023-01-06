@@ -60,10 +60,76 @@ async def get_loc(id: str, ):
     return res['data']
 
 
+@app.get("/near-locations", status_code=status.HTTP_200_OK)
+async def get_loc(id: str, radius: int = 5000):
+    sql_q = """--sql
+        WITH buffer AS ( 
+            SELECT 
+                location_id
+                , ST_Transform(
+                    ST_Buffer(
+                        ST_Transform(geom, 23240), %(radius)s
+                        ),4326) AS buffer_geom
+                , geom
+            FROM locations 
+            WHERE location_id = %(id)s
+        ), 
+        un_geoms AS (
+            SELECT NULL AS location_id, buffer_geom as geom
+            FROM buffer
+            UNION 
+            SELECT t1.location_id, t1.geom
+            FROM locations t1, buffer t2 
+            WHERE ST_Intersects(t1.geom, t2.buffer_geom)
+        )
+        SELECT 
+        jsonb_build_object(
+            'type', 'FeatureCollection',
+            'features', jsonb_agg(obj)
+            ) as data
+        FROM (SELECT ST_AsGeoJSON(un.*)::jsonb as obj FROM un_geoms un) t
+        """
+    async with await psycopg.AsyncConnection.connect(get_settings().dsn) as aconn:
+        async with aconn.cursor(row_factory=dict_row) as acur:
+            await acur.execute(sql_q, ({'radius': radius, 'id': id}))
+            res = await acur.fetchone()
+    if not res['data']['features']:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail='location_id not exists')
+    return res['data']
+
+
 async def valhalla_get(json):
     async with aiohttp.ClientSession() as session:
         async with session.post('http://valhalla:8002/route', data=json) as resp:
             return await resp.json()
+
+
+async def valhalla_geojson(sart_poi, end_pois):
+    fc = {
+        "type": "FeatureCollection",
+        "features": []}
+
+    for end in end_pois:
+        q = {"locations": [sart_poi, {'lon': end['lon'], 'lat': end['lat']}],
+             "costing": "auto",
+             "directions_options": {"units": "kilometers"}}
+        res = await valhalla_get(json.dumps(q))
+ 
+        geojson = {
+            "type": "Feature",
+            "id": end['location_id'],
+            "properties": {**end,
+                           'time': res['trip']['summary']['time'],
+                           'length_km': res['trip']['summary']['length'],
+                           },
+            "geometry": {
+                "coordinates": decode_route(res['trip']['legs'][0]['shape']),
+                "type": "LineString"
+            }}
+        fc['features'].append(geojson)
+
+    return fc
 
 
 def decode_route(encoded):
@@ -96,21 +162,13 @@ def decode_route(encoded):
     return decoded
 
 
-@app.get("/calc-routes", status_code=status.HTTP_200_OK)
-async def calc_routes(id: str):
-    sql_1 = """SELECT lat, long as lon FROM locations WHERE location_id = %(id)s"""
+@app.get("/routes", status_code=status.HTTP_200_OK)
+async def calc_routes(lat: float, lon: float):
+    start_point = {'lat': lat, 'lon': lon}
     sql_q = """--sql
         WITH input_point AS (
-            SELECT 
-			Location_Name
-			, Lat
-			, Long
-			, Location_Type
-			, Note
-            , location_id
-			, ST_Transform(geom, 23240) AS geom 
-            FROM public.locations 
-            WHERE location_id = %(id)s),
+            SELECT ST_Transform(ST_SetSRID(ST_Point(  %(lon)s, %(lat)s),4326), 23240) AS geom 
+        ),
         buffer AS (
             SELECT ST_Transform(ST_Buffer(geom, 5000),4326) AS geom 
             FROM input_point
@@ -125,40 +183,16 @@ async def calc_routes(id: str):
         FROM 
             public.locations t1, buffer t2
         WHERE ST_Intersects(t2.geom, t1.geom) 
-        AND t1.location_id <> %(id)s
             """
 
     async with await psycopg.AsyncConnection.connect(get_settings().dsn) as aconn:
         async with aconn.cursor(row_factory=dict_row) as acur:
-            await acur.execute(sql_1, {'id': id})
-            sart_poi = await acur.fetchone()
-            await acur.execute(sql_q, {'id': id})
+            await acur.execute(sql_q, start_point)
             end_pois = await acur.fetchall()
-
-    fc = {
-        "type": "FeatureCollection",
-        "features": []}
-
-    for end in end_pois:
-        q = {"locations": [sart_poi, {'lon': end['lon'], 'lat': end['lat']}],
-             "costing": "auto",
-             "directions_options": {"units": "kilometers"}}
-        res = await valhalla_get(json.dumps(q))
-        geojson = {
-            "type": "Feature",
-            "id": end['location_id'],
-                    "properties": {**end,
-                                   'time': res['trip']['summary']['time'],
-                                   'length_km': res['trip']['summary']['length'],
-                                   },
-                    "geometry": {
-                        "coordinates": decode_route(res['trip']['legs'][0]['shape']),
-                        "type": "LineString"
-            }}
-        fc['features'].append(geojson)
+    res = await valhalla_geojson(start_point, end_pois)
     if not res:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    return fc
+    return res
 
 
 @app.get("/tiles/{z}/{x}/{y}.pbf", status_code=status.HTTP_200_OK)
