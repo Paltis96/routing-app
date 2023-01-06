@@ -1,19 +1,55 @@
 version: '3.1'
 
 services:
-  client:
-    build: ./client
+  reverse-proxy:
+    # The official v2 Traefik docker image
+    image: traefik:v2.9
+    restart: always
+    # Enables the web UI and tells Traefik to listen to docker
+    command:
+      # - '--api.insecure=true'
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.db.address=:5432" # PostgreSQL endpoint
+
     ports:
-        - 80:80
+      # The HTTP port
+      - "80:80"
+      # The Web UI (enabled by --api.insecure=true)
+      # - "8080:8080"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: 'http://${BASE_URL}/api'
+    restart: always
+    depends_on:
+      - api
+      - reverse-proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.client.rule=Host(`${BASE_URL}`)"
+      - "traefik.http.services.client.loadbalancer.server.port=8080"
   api:
     build: ./server
+    restart: always
     depends_on:
       - db
-    ports:
-      - 8000:8000
+      - reverse-proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`${BASE_URL}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.middlewares=api-stripprefix"
+      - "traefik.http.middlewares.api-stripprefix.stripprefix.prefixes=/api"
+      - "traefik.http.services.api.loadBalancer.server.port=8000"
     volumes:
       - ./server/:/usr/src/app:ro
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload 
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       - DSN=postgresql://postgres:zxc098cxz@db:5432/app
   db:
@@ -21,13 +57,22 @@ services:
     restart: always
     ports:
       - 5432:5432
+    labels:
+      - "traefik.enable=true"
+      # routers
+      - "traefik.tcp.routers.db.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.db.entryPoints=db"
+      - "traefik.tcp.routers.db.service=db"
+      # services (needed for TCP)
+      - "traefik.tcp.services.db.loadbalancer.server.port=5432"    
     environment:
       POSTGRES_PASSWORD: zxc098cxz
       POSTGRES_DB: app
     volumes:
-      - postgres-data:/var/lib/postgresql/data 
+      - postgres-data:/var/lib/postgresql/data
   valhalla:
     image: gisops/valhalla:latest
+    restart: always
     ports:
       - "8002:8002"
     volumes:
@@ -39,15 +84,16 @@ services:
       # Don't blank out tile_url when you use tile_file and vice versa.
       - tile_urls=https://download.bbbike.org/osm/extract/planet_52.646_15.961_e5ecc151.osm.pbf
       # Get correct bounding box from e.g. https://boundingbox.klokantech.com/
-      - min_x=50 
-      - min_y=16 
-      - max_x=60 
-      - max_y=27 
+      - min_x=50
+      - min_y=16
+      - max_x=60
+      - max_y=27
       - use_tiles_ignore_pbf=True
       - force_rebuild=False
       - force_rebuild_elevation=False
       - build_elevation=True
       - build_admins=True
       - build_time_zones=True
+
 volumes:
   postgres-data:
