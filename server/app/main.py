@@ -115,16 +115,18 @@ async def valhalla_geojson(sart_poi, end_pois):
              "costing": "auto",
              "directions_options": {"units": "kilometers"}}
         res = await valhalla_get(json.dumps(q))
- 
+        time = res['trip']['summary']['time']
+        length_km = res['trip']['summary']['length']
+        geom = res['trip']['legs'][0]['shape']
         geojson = {
             "type": "Feature",
             "id": end['location_id'],
             "properties": {**end,
-                           'time': res['trip']['summary']['time'],
-                           'length_km': res['trip']['summary']['length'],
+                           'time': time,
+                           'length_km': length_km,
                            },
             "geometry": {
-                "coordinates": decode_route(res['trip']['legs'][0]['shape']),
+                "coordinates": decode_route(geom),
                 "type": "LineString"
             }}
         fc['features'].append(geojson)
@@ -167,10 +169,10 @@ async def calc_routes(lat: float, lon: float):
     start_point = {'lat': lat, 'lon': lon}
     sql_q = """--sql
         WITH input_point AS (
-            SELECT ST_Transform(ST_SetSRID(ST_Point(  %(lon)s, %(lat)s),4326), 23240) AS geom 
+            SELECT ST_SetSRID(ST_Point(%(lon)s, %(lat)s),4326) AS geom 
         ),
         buffer AS (
-            SELECT ST_Transform(ST_Buffer(geom, 5000),4326) AS geom 
+            SELECT ST_Transform(ST_Buffer(ST_Transform(geom, 23240), 5000),4326) AS geom 
             FROM input_point
         )
 		SELECT 
@@ -181,8 +183,9 @@ async def calc_routes(lat: float, lon: float):
             , st_x(t1.geom) as lon
             , st_y(t1.geom) as lat
         FROM 
-            public.locations t1, buffer t2
+            public.locations t1, buffer t2, input_point t3
         WHERE ST_Intersects(t2.geom, t1.geom) 
+        AND NOT ST_Intersects(t3.geom, t1.geom) 
             """
 
     async with await psycopg.AsyncConnection.connect(get_settings().dsn) as aconn:
