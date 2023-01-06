@@ -68,6 +68,7 @@
 import { ref, onMounted, onUnmounted, reactive, computed, watch } from "vue";
 import { useAppStore } from "@/store/app";
 import axios from "axios";
+import { geomEach } from "@turf/meta";
 
 // @ts-ignore
 import { saveAs } from "file-saver";
@@ -106,8 +107,8 @@ watch(selectedRoutesId, (newId: string[]) => {
   appStore.updateRoutesFilter(newId);
 });
 
-watch(hoverId, (newId: string, ) => {
-  appStore.updateHoverFilter(newId );
+watch(hoverId, (newId: string) => {
+  appStore.updateHoverFilter(newId);
 });
 const togleSelection = () => {
   selectedRoutesId.value =
@@ -115,32 +116,56 @@ const togleSelection = () => {
       ? []
       : routesProps.value.map((item: any) => item.location_id);
 };
-
-const getPoiInRadius = async () => {
-  loading.value = true;
+const getRoutes = (lon: number, lat: number) => {
   axios
-    .all([
-      axios.get("/get-loc", {
-        params: { id: query.value },
-      }),
-      axios.get("/calc-routes", {
-        params: { id: query.value },
-      }),
-    ])
-    .then((res) => {
-      console.log(res[1]);
-      appStore.setSourceData("pois_in_buffer", res[0]);
-      routes = Object.assign(routes, res[1]);
+    .get("/routes", {
+      params: { lon, lat },
+    })
+    .then((new_routes) => {
+      routes = Object.assign(routes, new_routes);
+      appStore.setSourceData("routes", routes);
+    })
+    .then(() => {
       selectedRoutesId.value = routesProps.value.map(
         (item: any) => item.location_id
       );
-      appStore.setSourceData("routes", res[1]);
     })
     .catch((err) => {
       if (err.response) alert(err.response.data.detail);
     })
     .finally(() => {
       loading.value = false;
+    });
+};
+
+const getPoiInRadius = async () => {
+  const loc_id = query.value;
+  let coords: any[];
+  loading.value = true;
+  axios
+    .get("/near-locations", { params: { id: loc_id } })
+    .then((res) => {
+      appStore.setSourceData("pois_in_buffer", res);
+      geomEach(
+        res as any,
+        (
+          currentGeometry: any,
+          featureIndex: number,
+          featureProperties: any
+        ) => {
+          if (featureProperties.location_id == loc_id) {
+            coords = currentGeometry.coordinates;
+            appStore.setMarker(coords)
+            return;
+          }
+        }
+      );
+    })
+    .then(() => {
+      getRoutes(coords[0], coords[1]);
+    })
+    .catch((err) => {
+      if (err.response) alert(err.response.data.detail);
     });
 };
 

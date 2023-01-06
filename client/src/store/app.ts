@@ -1,6 +1,6 @@
 // Utilities
 import { defineStore } from 'pinia'
-import { Map, NavigationControl } from "maplibre-gl";
+import { Map, NavigationControl, Marker } from "maplibre-gl";
 import { featureEach, geomEach } from '@turf/meta'
 import bbox from '@turf/bbox'
 
@@ -8,10 +8,11 @@ export const useAppStore = defineStore('app', {
   state: () => ({
     map: {} as any,
     zoomControl: new NavigationControl({}),
+    marker: new Marker(),
     curMapSyle: 1,
     mapsTileSyles: {
-      title: "OSM",
-      img: "https://tile.openstreetmap.org/4/9/5.png",
+      title: "Google Satellite Hybrid",
+      img: "https://qms.nextgis.com/api/v1/icons/81/content",
     },
   }),
   actions: {
@@ -20,12 +21,13 @@ export const useAppStore = defineStore('app', {
         container: 'map',
         hash: true,
         style: {
+
           version: 8,
           glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
           sources: {
             __baseMap: {
               type: "raster",
-              tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+              tiles: ["https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"],
               tileSize: 256,
             },
           },
@@ -77,7 +79,7 @@ export const useAppStore = defineStore('app', {
           'source': 'pois_in_buffer',
           'paint': {
             'fill-color': '#4CAF50',
-            'fill-opacity': 0.3
+            'fill-opacity': 0.2
           },
           'filter': ['==', '$type', 'Polygon']
         });
@@ -95,6 +97,7 @@ export const useAppStore = defineStore('app', {
           },
           'filter': ['==', '$type', 'Polygon']
         });
+        // routes
         this.map.addSource('routes', {
           'type': 'geojson',
           'data': {
@@ -102,7 +105,6 @@ export const useAppStore = defineStore('app', {
             "features": []
           }
         })
-        // routes
         this.map.addLayer({
           'id': 'route-outline',
           'source': 'routes',
@@ -112,7 +114,7 @@ export const useAppStore = defineStore('app', {
             'line-cap': 'round'
           },
           'paint': {
-            'line-color': '#283593',
+            'line-color': '#0D47A1',
             'line-width': 6
           }
 
@@ -126,8 +128,7 @@ export const useAppStore = defineStore('app', {
             'line-cap': 'round'
           },
           'paint': {
-            'line-color': '#5c6bc0',
-
+            'line-color': '#2196F3',
             'line-width': 3
           },
         });
@@ -143,7 +144,7 @@ export const useAppStore = defineStore('app', {
             'line-color': '#F44336',
             'line-width': 8
           },
-          'filter':["==", ['get', 'location_id'], '']
+          'filter': ["==", ['get', 'location_id'], '']
         });
         // buffer
         this.map.addLayer({
@@ -151,28 +152,28 @@ export const useAppStore = defineStore('app', {
           'type': 'circle',
           'source': 'pois_in_buffer',
           'paint': {
-            'circle-radius': 3,
-            'circle-color': '#ffffff',
-            'circle-stroke-width': 1.6,
-
+            'circle-stroke-width': 2,
+            'circle-stroke-color': '#0D47A1',
+            'circle-radius': 4.5,
+            'circle-color': '#ffffff'
           },
           'filter': ['==', '$type', 'Point']
         });
-        this.map.addSource('a-point', {
-          'type': 'geojson',
-          'data': {
-            "type": "FeatureCollection",
-            "features": []
-          }
-        });
 
         this.map.addLayer({
-          'id': 'a-point',
-          'type': 'circle',
-          'source': 'a-point',
+          'id': 'buffer-pois-labels',
+          'type': 'symbol',
+          'source': 'pois_in_buffer',
+          'layout': {
+            'text-field':
+              ['to-string', ['get', 'location_id']],
+            'text-size': 14,
+            'text-variable-anchor': ['top'],
+            "text-radial-offset": 0.5
+          },
           'paint': {
-            'circle-radius': 10,
-            'circle-color': '#3887be'
+            'text-halo-width': 2,
+            'text-halo-color': '#ffffff'
           }
         });
       })
@@ -186,9 +187,12 @@ export const useAppStore = defineStore('app', {
       this.map.getSource(source_id).setData(features)
       this.flyToBuffer(features)
     },
-
+    setMarker(coords: number[]) {
+      this.marker.setLngLat(coords as any)
+        .addTo(this.map);
+    },
     updateRoutesFilter(id: string[]) {
-      const layers = ['route-outline', 'route', 'buffer-pois']
+      const layers = ['route-outline', 'route', 'buffer-pois', 'buffer-pois-labels']
       const filter = ["in",
         ['get', 'location_id'],
         ["literal", id]]
