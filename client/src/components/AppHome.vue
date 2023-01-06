@@ -116,6 +116,7 @@ const togleSelection = () => {
       ? []
       : routesProps.value.map((item: any) => item.location_id);
 };
+
 const getRoutes = (lon: number, lat: number) => {
   axios
     .get("/routes", {
