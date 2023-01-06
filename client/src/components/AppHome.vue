@@ -155,7 +155,7 @@ const getPoiInRadius = async () => {
         ) => {
           if (featureProperties.location_id == loc_id) {
             coords = currentGeometry.coordinates;
-            appStore.setMarker(coords)
+            appStore.setMarker(coords);
             return;
           }
         }
@@ -166,6 +166,7 @@ const getPoiInRadius = async () => {
     })
     .catch((err) => {
       if (err.response) alert(err.response.data.detail);
+      loading.value = false;
     });
 };
 

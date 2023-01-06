@@ -41,6 +41,7 @@ services:
     depends_on:
       - db
       - reverse-proxy
+      - valhalla
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`${BASE_URL}`) && PathPrefix(`/api`)"
@@ -64,7 +65,7 @@ services:
       - "traefik.tcp.routers.db.entryPoints=db"
       - "traefik.tcp.routers.db.service=db"
       # services (needed for TCP)
-      - "traefik.tcp.services.db.loadbalancer.server.port=5432"    
+      - "traefik.tcp.services.db.loadbalancer.server.port=5432"
     environment:
       POSTGRES_PASSWORD: zxc098cxz
       POSTGRES_DB: app
