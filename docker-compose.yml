@@ -10,11 +10,11 @@ services:
       # - '--api.insecure=true'
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.address=:${APP_BASE_PORT}"
       - "--entrypoints.db.address=:5432" # PostgreSQL endpoint
     ports:
       # The HTTP port
-      - "80:80"
+      - "${APP_BASE_PORT}:${APP_BASE_PORT}"
       # The Web UI (enabled by --api.insecure=true)
       # - "8080:8080"
     volumes:
@@ -25,14 +25,14 @@ services:
       context: ./client
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: 'http://${BASE_URL}/api'
+        VITE_API_URL: 'http://${APP_BASE_URL}:${APP_BASE_PORT}/api'
     restart: always
     depends_on:
       - api
       - reverse-proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.client.rule=Host(`${BASE_URL}`)"
+      - "traefik.http.routers.client.rule=Host(`${APP_BASE_URL}`)"
       - "traefik.http.services.client.loadbalancer.server.port=80"
   api:
     build: ./server
@@ -43,7 +43,7 @@ services:
       - valhalla
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`${BASE_URL}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.rule=Host(`${APP_BASE_URL}`) && PathPrefix(`/api`)"
       - "traefik.http.routers.api.middlewares=api-stripprefix"
       - "traefik.http.middlewares.api-stripprefix.stripprefix.prefixes=/api"
       - "traefik.http.services.api.loadBalancer.server.port=8000"
@@ -51,7 +51,7 @@ services:
       - ./server/:/usr/src/app:ro
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
-      - DSN=postgresql://postgres:zxc098cxz@db:5432/app
+      - DSN=postgresql://postgres:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
   db:
     image: pgrouting/pgrouting
     restart: always
@@ -66,8 +66,8 @@ services:
       # services (needed for TCP)
       - "traefik.tcp.services.db.loadbalancer.server.port=5432"
     environment:
-      POSTGRES_PASSWORD: zxc098cxz
-      POSTGRES_DB: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres-data:/var/lib/postgresql/data
   valhalla:
@@ -82,16 +82,16 @@ services:
       # The tile_file has priority and is used when valid.
       # If the tile_file doesn't exist, the url is used instead.
       # Don't blank out tile_url when you use tile_file and vice versa.
-      - tile_urls=https://download.bbbike.org/osm/extract/planet_52.646_15.961_e5ecc151.osm.pbf
+      - tile_urls=${OSM_PBF}
       # Get correct bounding box from e.g. https://boundingbox.klokantech.com/
-      - min_x=50
-      - min_y=16
-      - max_x=60
-      - max_y=27
+      # - min_x=50
+      # - min_y=16
+      # - max_x=60
+      # - max_y=27
       - use_tiles_ignore_pbf=True
       - force_rebuild=False
       - force_rebuild_elevation=False
-      - build_elevation=True
+      - build_elevation=False
       - build_admins=True
       - build_time_zones=True
 
