@@ -1,5 +1,5 @@
 <template>
-  <v-sheet color="blue-grey-lighten-2" class="pa-4">
+  <v-sheet class="pa-4">
     <v-text-field
       @keyup.enter="getBaseMapList"
       @click:clear="getBaseMapList"
@@ -9,6 +9,7 @@
       clearable
       v-model="query"
       label="Search"
+      placeholder="Enter base map provider name"
     ></v-text-field
   ></v-sheet>
   <v-row class="ma-2">

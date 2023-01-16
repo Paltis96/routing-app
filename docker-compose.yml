@@ -17,6 +17,8 @@ services:
       - "${APP_BASE_PORT}:${APP_BASE_PORT}"
       # The Web UI (enabled by --api.insecure=true)
       # - "8080:8080"
+    depends_on:
+      - api
     volumes:
       # So that Traefik can listen to the Docker events
       - /var/run/docker.sock:/var/run/docker.sock
@@ -29,7 +31,6 @@ services:
     restart: always
     depends_on:
       - api
-      - reverse-proxy
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.client.rule=Host(`${APP_BASE_URL}`)"
@@ -39,7 +40,6 @@ services:
     restart: always
     depends_on:
       - db
-      - reverse-proxy
       - valhalla
     labels:
       - "traefik.enable=true"
@@ -49,11 +49,13 @@ services:
       - "traefik.http.services.api.loadBalancer.server.port=8000"
     volumes:
       - ./server/:/usr/src/app:ro
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: >
+      bash -c "python3 deploy.py &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     environment:
       - DSN=postgresql://postgres:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
   db:
-    image: pgrouting/pgrouting
+    image: postgis/postgis
     restart: always
     ports:
       - 5432:5432
