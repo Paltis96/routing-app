@@ -69,12 +69,12 @@ async def get_routes(lat: float, lon: float, radius: int = 5000):
 
 
 @app.get("/route", status_code=status.HTTP_200_OK)
-async def get_directions(origin: str, destination: str):
+async def get_route(origin: str, destination: str):
     def parse_coord_str(coord_str: str):
         coords = coord_str.split(',')
         if len(coords) == 2:
             res = list(map(lambda x: float(x), coords))
-            res = {'lat': res[0], "lon": res[1]}
+            res = {'lon': res[0], "lat": res[1]}
             print(res)
             return res
         else:
