@@ -1,23 +1,10 @@
 <template>
-  <v-sheet class="pa-4">
-    <v-text-field
-      @keyup.enter="getBaseMapList"
-      @click:clear="getBaseMapList"
-      :loading="loading"
-      hide-details="auto"
-      variant="solo"
-      clearable
-      v-model="query"
-      label="Search"
-      placeholder="Enter base map provider name"
-    ></v-text-field
-  ></v-sheet>
   <v-row class="ma-2">
     <v-col cols="12">
-      <v-card>
+      <v-card class="pt-2 rounded-lg elevation-0">
         <v-card-title>Current base map</v-card-title>
         <v-card-text>
-          <v-list>
+          <v-list class="rounded-lg bg-grey-lighten-4">
             <v-list-item
               :title="appStore.mapsTileSyles.title"
               :prepend-avatar="appStore.mapsTileSyles.img"
@@ -27,10 +14,25 @@
         </v-card-text>
       </v-card>
     </v-col>
-    <v-col v-if="baseMapList.length > 0" cols="12">
-      <v-card>
-        <v-card-title>Base maps: {{ baseMapList.length }} </v-card-title>
-        <v-card-text>
+
+    <v-col cols="12">
+      <v-card class="rounded-lg elevation-0">
+        <v-text-field
+          @keyup.enter="getBaseMapList"
+          @click:clear="getBaseMapList"
+          :loading="loading"
+          clearable
+          v-model="query"
+          label="Basemaps search"
+          class="ma-4"
+          placeholder="Enter base map provider name"
+          variant="outlined"
+          hide-details
+        ></v-text-field>
+        <v-card-title v-if="baseMapList.length > 0"
+          >Base maps: {{ baseMapList.length }}
+        </v-card-title>
+        <v-card-text v-if="baseMapList.length > 0">
           <v-list>
             <v-list-item
               v-for="item in baseMapList"
@@ -41,7 +43,6 @@
               :prepend-avatar="item.icon"
               active-color="primary"
               @click="setBaseMap(item)"
-
             >
             </v-list-item> </v-list></v-card-text
       ></v-card>

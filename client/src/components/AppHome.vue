@@ -1,64 +1,94 @@
 <template>
-  <v-sheet class="pa-4">
-    <v-text-field
-      @keyup.enter="getPoiInRadius"
-      :loading="loading"
-      variant="solo"
-      hide-details="auto"
-      clearable
-      v-model="query"
-      label="Search"
-      placeholder="Enter location_id"
-    ></v-text-field>
-  </v-sheet>
-  <v-row class="ma-2">
+  <v-row class="ma-2" dense>
     <v-col cols="12">
-      <v-card v-if="routesLen > 0">
-        <v-card-title>Routes: {{ routesLen }}</v-card-title>
-        <v-table hover fixed-header height="50vh" @mouseleave="hoverId = ''">
-          <thead>
-            <tr>
-              <th class="text-left">
-                <v-checkbox
-                  density="compact"
-                  hide-details="auto"
-                  v-model="allSelected"
-                  @click="togleSelection"
-                ></v-checkbox>
-              </th>
-              <th class="text-left">To point</th>
-              <th class="text-left">Name</th>
-              <!-- <th class="text-left">id</th> -->
-              <th class="text-left">type</th>
-              <th class="text-left">length km</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in routesProps"
-              :key="item.name"
-              @mouseover="hoverId = item.location_id"
-            >
-              <td>
-                <v-checkbox
-                  density="compact"
-                  hide-details="auto"
-                  v-model="selectedRoutesId"
-                  :value="item.location_id"
-                ></v-checkbox>
-              </td>
-              <td>{{ item.location_id }}</td>
-              <td>{{ item.location_name }}</td>
-              <td>{{ item.location_type }}</td>
-              <td>{{ item.length_km }}</td>
-            </tr>
-          </tbody>
-        </v-table>
-        <v-card-actions>
-          <v-btn @click="downloadContent" color="indigo">
-            Export to kml {{ selectedRoutesLen }}</v-btn
+      <v-card class="rounded-lg elevation-0">
+        <v-card-text>
+          <v-btn-toggle
+            class="rounded-lg"
+            v-model="routingMode"
+            rounded="0"
+            group
           >
-        </v-card-actions>
+            <v-btn value="route"> A/B route </v-btn>
+            <v-btn value="matrix"> Matrix </v-btn>
+          </v-btn-toggle>
+        </v-card-text>
+
+        <div class="pa-4" v-if="routingMode == 'matrix'">
+          <v-select
+            variant="outlined"
+            v-model="searchMode"
+            label="Search mode"
+            :items="['id', 'coord']"
+          ></v-select>
+          <v-text-field
+            @keyup.enter="getPoiInRadius"
+            :loading="loading"
+            @click:clear="errorMessages = ''"
+            clearable
+            v-model="query"
+            label="Search"
+            :placeholder="
+              searchMode == 'id' ? 'Enter location_id' : 'Enter coord'
+            "
+            :error-messages="errorMessages"
+            variant="outlined"
+          ></v-text-field>
+          <v-card-title v-if="routesLen > 0"
+            >Routes: {{ routesLen }}</v-card-title
+          >
+
+          <v-card-text v-if="routesLen > 0">
+            <v-table
+              hover
+              fixed-header
+              height="50vh"
+              @mouseleave="hoverId = ''"
+              class="mb-4"
+            >
+              <thead>
+                <tr>
+                  <th class="text-left">
+                    <v-checkbox
+                      density="compact"
+                      hide-details="auto"
+                      v-model="allSelected"
+                      @click="togleSelection"
+                    ></v-checkbox>
+                  </th>
+                  <th class="text-left">To point</th>
+                  <th class="text-left">Name</th>
+                  <!-- <th class="text-left">id</th> -->
+                  <th class="text-left">type</th>
+                  <th class="text-left">length km</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="item in routesProps"
+                  :key="item.name"
+                  @mouseover="hoverId = item.location_id"
+                >
+                  <td>
+                    <v-checkbox
+                      density="compact"
+                      hide-details="auto"
+                      v-model="selectedRoutesId"
+                      :value="item.location_id"
+                    ></v-checkbox>
+                  </td>
+                  <td>{{ item.location_id }}</td>
+                  <td>{{ item.location_name }}</td>
+                  <td>{{ item.location_type }}</td>
+                  <td>{{ item.length_km }}</td>
+                </tr>
+              </tbody>
+            </v-table>
+            <v-btn @click="downloadContent" color="blue  elevation-0 ">
+              Export to kml {{ selectedRoutesLen }}</v-btn
+            >
+          </v-card-text>
+        </div>
       </v-card>
     </v-col>
   </v-row>
@@ -80,6 +110,9 @@ const query = ref("");
 const loading = ref(false);
 const selectedRoutesId: any = ref([]);
 const hoverId = ref("");
+const errorMessages = ref("");
+const routingMode = ref("matrix");
+const searchMode = ref("id");
 let routes: any = reactive({});
 
 const routesLen = computed(() => {
@@ -132,7 +165,7 @@ const getRoutes = (lon: number, lat: number) => {
       );
     })
     .catch((err) => {
-      if (err.response) alert(err.response.data.detail);
+      console.log(err);
     })
     .finally(() => {
       loading.value = false;
@@ -140,35 +173,64 @@ const getRoutes = (lon: number, lat: number) => {
 };
 
 const getPoiInRadius = async () => {
-  const loc_id = query.value;
   let coords: any[];
-  loading.value = true;
-  axios
-    .get("/near-locations", { params: { id: loc_id } })
-    .then((res) => {
-      appStore.setSourceData("pois_in_buffer", res);
-      geomEach(
-        res as any,
-        (
-          currentGeometry: any,
-          featureIndex: number,
-          featureProperties: any
-        ) => {
-          if (featureProperties.location_id == loc_id) {
-            coords = currentGeometry.coordinates;
-            appStore.setMarker(coords);
-            return;
+
+  if (searchMode.value != "id") {
+    const loc = query.value.split(",");
+    if (loc.length != 2) {
+      errorMessages.value = "Unprocessable Entity";
+      return;
+    }
+    axios
+      .get("/near-locations-by-coord", {
+        params: { lon: loc[0], lat: loc[1] },
+      })
+      .then((res) => {
+        appStore.setSourceData("pois_in_buffer", res);
+        coords = loc;
+        appStore.setMarker(coords);
+      })
+      .then(() => {
+        getRoutes(coords[0], coords[1]);
+      })
+      .catch((err) => {
+        if (err.response.data.detail)
+          errorMessages.value = err.response.data.detail;
+        else errorMessages.value = "Error";
+        loading.value = false;
+      });
+  } else {
+    const loc_id = query.value;
+    loading.value = true;
+    axios
+      .get("/near-locations", { params: { id: loc_id } })
+      .then((res) => {
+        appStore.setSourceData("pois_in_buffer", res);
+        geomEach(
+          res as any,
+          (
+            currentGeometry: any,
+            featureIndex: number,
+            featureProperties: any
+          ) => {
+            if (featureProperties.location_id == loc_id) {
+              coords = currentGeometry.coordinates;
+              appStore.setMarker(coords);
+              return;
+            }
           }
-        }
-      );
-    })
-    .then(() => {
-      getRoutes(coords[0], coords[1]);
-    })
-    .catch((err) => {
-      if (err.response) alert(err.response.data.detail);
-      loading.value = false;
-    });
+        );
+      })
+      .then(() => {
+        getRoutes(coords[0], coords[1]);
+      })
+      .catch((err) => {
+        if (err.response.data.detail)
+          errorMessages.value = err.response.data.detail;
+        else errorMessages.value = "Error";
+        loading.value = false;
+      });
+  }
 };
 
 const downloadContent = (key: any, type = "kml") => {

@@ -1,13 +1,14 @@
 <template>
   <v-app>
     <v-main>
-      <v-row no-gutters dense>
+      <v-row no-gutters class="bg-main">
         <v-col cols="12" sm="4">
           <v-tabs
-            class="is-sticky"
-            bg-color="blue-grey-darken-2"
+            class="is-sticky elevation-2"
+            align-tabs="center"
             fixed-tabs
             v-model="tab"
+            bg-color="blue"
           >
             <v-tab value="route"> <v-icon start> route </v-icon> route </v-tab>
             <v-tab value="basemap">
@@ -44,9 +45,8 @@ axios.interceptors.response.use((response) => response.data);
 const appStore = useAppStore();
 const tab = ref("home");
 
-
 onMounted(() => {
-  console.log(import.meta.env.VITE_API_URL)
+  console.log(import.meta.env.VITE_API_URL);
   appStore.addMap();
 });
 onUnmounted(() => {
@@ -63,5 +63,8 @@ onUnmounted(() => {
   position: sticky !important;
   right: 0;
   top: 0;
+}
+.bg-main {
+  background-color: #eef5f9;
 }
 </style>

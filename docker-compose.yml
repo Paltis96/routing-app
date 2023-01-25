@@ -53,7 +53,7 @@ services:
       bash -c "python3 deploy.py &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     environment:
-      - DSN=postgresql://postgres:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
+      - DSN=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
   db:
     image: postgis/postgis
     restart: always

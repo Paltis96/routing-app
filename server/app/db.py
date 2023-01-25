@@ -25,7 +25,7 @@ get_loc_sql = """--sql
         ) as data
     FROM (SELECT ST_AsGeoJSON(un.*)::jsonb as obj FROM un_geoms un) t
     """
-    
+
 near_locations_sql = """--sql
     WITH buffer AS ( 
         SELECT 
@@ -53,13 +53,37 @@ near_locations_sql = """--sql
         ) as data
     FROM (SELECT ST_AsGeoJSON(un.*)::jsonb as obj FROM un_geoms un) t
     """
-    
+
+near_locations_by_coord_sql = """--sql
+    WITH buffer AS ( 
+        SELECT 
+            ST_Transform(
+                ST_Buffer(
+                    ST_Transform(ST_SetSRID(ST_Point( %(lon)s, %(lat)s),4326), 23240), %(radius)s
+                    ),4326) AS buffer_geom
+    ), 
+    un_geoms AS (
+        SELECT NULL AS location_id, buffer_geom as geom
+        FROM buffer
+        UNION 
+        SELECT t1.location_id, t1.geom
+        FROM locations t1, buffer t2 
+        WHERE ST_Intersects(t1.geom, t2.buffer_geom)
+    )
+    SELECT 
+    jsonb_build_object(
+        'type', 'FeatureCollection',
+        'features', jsonb_agg(obj)
+        ) as data
+    FROM (SELECT ST_AsGeoJSON(un.*)::jsonb as obj FROM un_geoms un) t
+    """
+
 calc_routes_sql = """--sql
     WITH input_point AS (
         SELECT ST_SetSRID(ST_Point(%(lon)s, %(lat)s),4326) AS geom 
     ),
     buffer AS (
-        SELECT ST_Transform(ST_Buffer(ST_Transform(geom, 23240), 5000),4326) AS geom 
+        SELECT ST_Transform(ST_Buffer(ST_Transform(geom, 23240), %(radius)s),4326) AS geom 
         FROM input_point
     )
     SELECT 
@@ -74,7 +98,7 @@ calc_routes_sql = """--sql
     WHERE ST_Intersects(t2.geom, t1.geom) 
     AND NOT ST_Intersects(t3.geom, t1.geom) 
         """
-        
+
 tile_sql = """--sql
 WITH mvtgeom AS
 (
