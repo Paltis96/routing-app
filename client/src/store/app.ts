@@ -1,7 +1,7 @@
 // Utilities
 import { defineStore } from 'pinia'
 import { Map, NavigationControl, Marker } from "maplibre-gl";
-import { featureEach, geomEach } from '@turf/meta'
+import { featureEach } from '@turf/meta'
 import bbox from '@turf/bbox'
 
 export const useAppStore = defineStore('app', {
@@ -9,11 +9,14 @@ export const useAppStore = defineStore('app', {
     map: {} as any,
     zoomControl: new NavigationControl({}),
     marker: new Marker(),
+    markerA: new Marker({ color: '#3bb2d0' }),
+    markerB: new Marker({ color: '#8a8acb' }),
     curMapSyle: 1,
     mapsTileSyles: {
       title: "Google Satellite Hybrid",
       img: "https://qms.nextgis.com/api/v1/icons/81/content",
     },
+
   }),
   actions: {
     addMap() {
@@ -186,10 +189,21 @@ export const useAppStore = defineStore('app', {
     setSourceData(source_id: any, features: any) {
       this.map.getSource(source_id).setData(features)
       this.flyToBuffer(features)
+
     },
-    setMarker(coords: number[]) {
-      this.marker.setLngLat(coords as any)
-        .addTo(this.map);
+    setMarker(coords: number[], type: string) {
+      if (type == 'origin') {
+        this.markerA.setLngLat(coords as any)
+          .addTo(this.map);
+      }
+      else if (type == 'destination') {
+        this.markerB.setLngLat(coords as any)
+          .addTo(this.map);
+      }
+      else {
+        this.marker.setLngLat(coords as any)
+          .addTo(this.map);
+      }
     },
     updateRoutesFilter(id: string[]) {
       const layers = ['route-outline', 'route', 'buffer-pois', 'buffer-pois-labels']
@@ -198,6 +212,12 @@ export const useAppStore = defineStore('app', {
         ["literal", id]]
       layers.forEach((layer) => {
         this.map.setFilter(layer, filter)
+      })
+    },
+    clearRoutesFilter() {
+      const layers = ['route-outline', 'route', 'buffer-pois', 'buffer-pois-labels']
+      layers.forEach((layer) => {
+        this.map.setFilter(layer, ['all'])
       })
     },
     updateHoverFilter(newId: string) {
@@ -221,5 +241,17 @@ export const useAppStore = defineStore('app', {
       this.map.style.sourceCaches["__baseMap"].update(this.map.transform);
       this.map.triggerRepaint();
     },
+    clearMap() {
+      const geojsonData = {
+        "type": "FeatureCollection",
+        "features": []
+      };
+      this.marker.remove()
+      this.markerA.remove()
+      this.markerB.remove()
+      this.map.getSource('pois_in_buffer').setData(geojsonData)
+      this.map.getSource('routes').setData(geojsonData)
+
+    }
   }
 })

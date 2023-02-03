@@ -51,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, reactive } from "vue";
+import { ref } from "vue";
 import axios from "axios";
 import { useAppStore } from "@/store/app";
 
@@ -61,13 +61,12 @@ const query = ref("");
 const baseMapList: any = ref([]);
 const loading = ref(false);
 
-const setBaseMap = (e: any) => {
+function setBaseMap(e: any) {
   appStore.setBaseMap(e);
-};
+}
 
-const getBaseMapList = async () => {
+async function getBaseMapList() {
   const re = /{x}|{y}|{z}/;
-  const httpsRe = /https/;
   baseMapList.value = [];
   if (query.value.length == 0) return;
   loading.value = true;
@@ -100,7 +99,7 @@ const getBaseMapList = async () => {
     .finally(() => {
       loading.value = false;
     });
-};
+}
 </script>
 
 <style scoped></style>
