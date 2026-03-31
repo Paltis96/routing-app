@@ -48,6 +48,11 @@ async def valhalla_geojson_route(sart_poi, end_poi):
          "costing": "auto",
          "directions_options": {"units": "kilometers"}}
     res = await valhalla_get(json.dumps(q))
+    
+    if not res.get('trip'):
+        print("Error: ", res)
+        raise Exception("No route found")
+    
     time = res['trip']['summary']['time']
     length_km = res['trip']['summary']['length']
     geom = res['trip']['legs'][0]['shape']
@@ -62,6 +67,7 @@ async def valhalla_geojson_route(sart_poi, end_poi):
             "type": "LineString"
         }}
     fc['features'].append(geojson)
+    print('Route found')
     return fc
 
 async def valhalla_geojson_routes(sart_poi, end_pois):
@@ -75,6 +81,12 @@ async def valhalla_geojson_routes(sart_poi, end_pois):
              "costing": "auto",
              "directions_options": {"units": "kilometers"}}
         res = await valhalla_get(json.dumps(q))
+        
+    
+        if not res.get('trip'):
+            print("Error: ", res)
+            raise Exception("No route found")
+        
         time = res['trip']['summary']['time']
         length_km = res['trip']['summary']['length']
         geom = res['trip']['legs'][0]['shape']
@@ -95,5 +107,5 @@ async def valhalla_geojson_routes(sart_poi, end_pois):
         return e['properties']['length_km']
 
     fc['features'].sort(key=get_key)
-
+    print('Route found')
     return fc

@@ -62,10 +62,16 @@ async def near_locations_by_coord(lon: str, lat: str, radius: int = 5000):
 async def get_routes(lat: float, lon: float, radius: int = 5000):
     start_point = {'lat': lat, 'lon': lon}
     end_pois = await fetch(calc_routes_sql, {**start_point, 'radius': radius})
-    res = await valhalla_geojson_routes(start_point, end_pois)
-    if not res:
+    try:
+        res = await valhalla_geojson_routes(start_point, end_pois)    
+        if not res:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        return res
+    except Exception as err:
+        print(err)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    return res
+
+
 
 
 @app.get("/route", status_code=status.HTTP_200_OK)
@@ -83,10 +89,16 @@ async def get_route(origin: str, destination: str):
 
     origin_coords = parse_coord_str(origin)
     destination_coords = parse_coord_str(destination)
-    res = await valhalla_geojson_route(origin_coords, destination_coords)
-    if not res:
+    try:
+        res = await valhalla_geojson_route(origin_coords, destination_coords)
+        if not res:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        return res
+    except Exception as err:
+        print(err)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    return res
+
+
 
 
 @app.get("/tiles/{z}/{x}/{y}.pbf", status_code=status.HTTP_200_OK)

@@ -8,17 +8,17 @@
     "lint": "eslint . --fix --ignore-path .gitignore"
   },
   "dependencies": {
-    "@maphubs/tokml": "^0.6.1",
+    "@maphubs/tokml": "0.6.1",
     "@mdi/font": "7.0.96",
-    "@turf/bbox": "^6.5.0",
-    "@turf/meta": "^6.5.0",
-    "axios": "^1.2.2",
-    "file-saver": "^2.0.5",
-    "maplibre-gl": "^2.4.0",
-    "pinia": "^2.0.23",
+    "@turf/bbox": "6.5.0",
+    "@turf/meta": "6.5.0",
+    "axios": "1.2.2",
+    "file-saver": "2.0.5",
+    "maplibre-gl": "2.4.0",
+    "pinia": "2.0.23",
     "roboto-fontface": "*",
-    "vue": "^3.2.38",
-    "vuetify": "^3.0.0",
+    "vue": "3.2.38",
+    "vuetify": "3.0.0",
     "webfontloader": "^1.0.0"
   },
   "devDependencies": {

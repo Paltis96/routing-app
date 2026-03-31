@@ -3,7 +3,7 @@ version: '3.1'
 services:
   reverse-proxy:
     # The official v2 Traefik docker image
-    image: traefik:v2.9
+    image: traefik:v2.11
     restart: always
     # Enables the web UI and tells Traefik to listen to docker
     command:
@@ -46,7 +46,7 @@ services:
       - "traefik.http.routers.api.rule=Host(`${APP_BASE_URL}`) && PathPrefix(`/api`)"
       - "traefik.http.routers.api.middlewares=api-stripprefix"
       - "traefik.http.middlewares.api-stripprefix.stripprefix.prefixes=/api"
-      - "traefik.http.services.api.loadBalancer.server.port=8000"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"
     volumes:
       - ./server/:/usr/src/app:ro
     command: >
@@ -73,7 +73,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
   valhalla:
-    image: gisops/valhalla:latest
+    image: ghcr.io/valhalla/valhalla-scripted:latest
     restart: always
     ports:
       - "8002:8002"

@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.9
 WORKDIR /usr/src/app
 RUN apt-get update && apt-get upgrade -y && pip3 install --upgrade pip
 COPY requirements.txt ./
