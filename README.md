@@ -12,7 +12,7 @@ APP_BASE_PORT=3000
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=routing
 
-OSM_PBF=https://download.geofabrik.de/europe/ukraine-latest.osm.pbf
+OSM_PBF=https://download.geofabrik.de/asia/gcc-states-latest.osm.pbf
 
 ## ▶️ Run
 
